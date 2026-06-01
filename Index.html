@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cashflow Tracker App</title>
+    <link class="no-print" rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0284c7">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @media print {
+            .no-print, form, button, .actions-column, .backup-zone {
+                display: none !important;
+            }
+            body {
+                background-color: white !important;
+                color: black !important;
+                font-size: 12pt;
+            }
+            .container {
+                max-width: 100% !important;
+                width: 100% !important;
+                padding: 0 !important;
+            }
+            .grid {
+                display: grid !important;
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                gap: 1rem !important;
+            }
+            .lg\:col-span-2 {
+                grid-column: span 3 / span 3 !important;
+            }
+            .shadow-sm, .shadow-md {
+                shadow: none !important;
+                border: 1px solid #cbd5e1 !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800">
+
+    <div class="container mx-auto p-4 max-w-5xl">
+        <header class="mb-8 text-center md:text-left flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+            <div>
+                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">💵 Cashflow<span class="text-emerald-600">Dex</span></h1>
+                <p class="text-slate-500 mt-1">Kelola dan pantau arus keuanganmu dengan mudah.</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex flex-col items-center md:items-end gap-2">
+                <div class="text-sm text-slate-500 font-medium" id="current-date"></div>
+                <button onclick="exportToPDF()" class="no-print bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm flex items-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-file-pdf"></i> Cetak PDF / Laporan
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl shadow-md text-white print:bg-none print:text-slate-900 print:border print:border-slate-300">
+                <div class="flex justify-between items-center opacity-80 mb-2 print:opacity-100">
+                    <span class="text-sm font-semibold tracking-wide uppercase">Total Saldo</span>
+                    <i class="fa-solid fa-wallet text-xl no-print"></i>
+                </div>
+                <h2 class="text-3xl font-bold tracking-tight" id="total-balance">Rp 0</h2>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                <div class="flex justify-between items-center text-slate-500 mb-2">
+                    <span class="text-sm font-semibold tracking-wide uppercase">Pemasukan</span>
+                    <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 no-print">
+                        <i class="fa-solid fa-arrow-down text-sm"></i>
+                    </div>
+                </div>
+                <h2 class="text-3xl font-bold text-slate-900 tracking-tight" id="total-income">Rp 0</h2>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                <div class="flex justify-between items-center text-slate-500 mb-2">
+                    <span class="text-sm font-semibold tracking-wide uppercase">Pengeluaran</span>
+                    <div class="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 no-print">
+                        <i class="fa-solid fa-arrow-up text-sm"></i>
+                    </div>
+                </div>
+                <h2 class="text-3xl font-bold text-slate-900 tracking-tight" id="total-expense">Rp 0</h2>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div id="form-container" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 h-fit">
+                <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-plus-circle text-emerald-600"></i> Tambah Transaksi
+                </h3>
+                
+                <form id="transaction-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Nama Transaksi</label>
+                        <input type="text" id="tx-title" required placeholder="Contoh: Gaji Bulanan, Beli Kopi" 
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Jumlah (Rp)</label>
+                        <input type="number" id="tx-amount" required placeholder="Masukkan nominal" 
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Jenis Transaksi</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="border border-slate-300 rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-700 font-medium transition-all">
+                                <input type="radio" name="tx-type" value="income" checked class="accent-emerald-600"> Pemasukan
+                            </label>
+                            <label class="border border-slate-300 rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 has-[:checked]:bg-rose-50 has-[:checked]:border-rose-50 has-[:checked]:text-rose-700 font-medium transition-all">
+                                <input type="radio" name="tx-type" value="expense" class="accent-rose-600"> Pengeluaran
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Kategori</label>
+                        <select id="tx-category" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                            <option value="Gaji/Omset">💼 Gaji / Omset</option>
+                            <option value="Makanan">🍔 Makanan & Minuman</option>
+                            <option value="Transportasi">🚗 Transportasi</option>
+                            <option value="Hiburan">🎬 Hiburan / Liburan</option>
+                            <option value="Lain-lain">📦 Lain-lain</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-xl transition-colors shadow-sm cursor-pointer mt-2">
+                        Simpan Transaksi
+                    </button>
+                </form>
+            </div>
+
+            <div class="lg:col-span-2 space-y-6">
+                <div class="no-print bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 flex flex-wrap items-center justify-between gap-4">
+                    <div class="text-sm text-slate-600 font-medium">
+                        <i class="fa-solid fa-shield-halved text-blue-600 mr-1"></i> Data Keamanan Cadangan
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="backupData()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5">
+                            <i class="fa-solid fa-download"></i> Backup Data (.json)
+                        </button>
+                        
+                        <button onclick="document.getElementById('import-file').click()" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5">
+                            <i class="fa-solid fa-upload"></i> Restore Data
+                        </button>
+                        <input type="file" id="import-file" accept=".json" class="hidden" onchange="restoreData(event)">
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-history text-indigo-600"></i> Riwayat Transaksi
+                    </h3>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-slate-400 text-sm font-semibold uppercase tracking-wider">
+                                    <th class="pb-3 font-semibold">Transaksi</th>
+                                    <th class="pb-3 font-semibold">Kategori</th>
+                                    <th class="pb-3 font-semibold text-right">Nominal</th>
+                                    <th class="pb-3 text-center font-semibold w-16 actions-column">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transaction-list" class="divide-y divide-slate-100 text-sm">
+                                </tbody>
+                        </table>
+                        
+                        <div id="empty-state" class="text-center py-12 text-slate-400 hidden">
+                            <i class="fa-solid fa-receipt text-4xl mb-3 opacity-50"></i>
+                            <p>Belum ada transaksi tercatat.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Ambil data awal dari localStorage
+        let transactions = JSON.parse(localStorage.getItem('cashflow_transactions')) || [];
+
+        // DOM Elements
+        const form = document.getElementById('transaction-form');
+        const titleInput = document.getElementById('tx-title');
+        const amountInput = document.getElementById('tx-amount');
+        const categoryInput = document.getElementById('tx-category');
+        const transactionList = document.getElementById('transaction-list');
+        const emptyState = document.getElementById('empty-state');
+
+        const totalBalanceEl = document.getElementById('total-balance');
+        const totalIncomeEl = document.getElementById('total-income');
+        const totalExpenseEl = document.getElementById('total-expense');
+
+        // Mengatur teks tanggal saat ini
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+
+        // Format angka ke mata uang Rupiah
+        function formatRupiah(number) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                maximumFractionDigits: 0
+            }).format(number);
+        }
+
+        // OTOMATIS TERUPDATE: Menghitung ulang dashboard & mengganti warna alert jika minus
+        function updateDashboard() {
+            let income = 0;
+            let expense = 0;
+
+            transactions.forEach(tx => {
+                if (tx.type === 'income') income += tx.amount;
+                if (tx.type === 'expense') expense += tx.amount;
+            });
+
+            const balance = income - expense;
+
+            totalIncomeEl.innerText = formatRupiah(income);
+            totalExpenseEl.innerText = formatRupiah(expense);
+            totalBalanceEl.innerText = formatRupiah(balance);
+
+            const balanceCard = totalBalanceEl.parentElement;
+            if (balance < 0) {
+                balanceCard.className = "bg-gradient-to-br from-rose-600 to-red-700 p-6 rounded-2xl shadow-md text-white print:bg-none print:text-red-600 print:border print:border-slate-300";
+            } else {
+                balanceCard.className = "bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl shadow-md text-white print:bg-none print:text-slate-900 print:border print:border-slate-300";
+            }
+        }
+
+        // OTOMATIS TERUPDATE: Memperbarui isi tabel riwayat setiap kali ada perubahan data
+        function renderTransactions() {
+            transactionList.innerHTML = '';
+
+            if (transactions.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            [...transactions].reverse().forEach((tx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition-colors";
+
+                const isIncome = tx.type === 'income';
+                const amountClass = isIncome ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold';
+                const prefix = isIncome ? '+' : '-';
+
+                tr.innerHTML = `
+                    <td class="py-4">
+                        <p class="font-bold text-slate-800">${tx.title}</p>
+                        <span class="text-xs text-slate-400">${tx.date}</span>
+                    </td>
+                    <td class="py-4 text-slate-500 font-medium">${tx.category}</td>
+                    <td class="py-4 text-right ${amountClass}">${prefix} ${formatRupiah(tx.amount).replace('Rp', '')}</td>
+                    <td class="py-4 text-center actions-column">
+                        <button onclick="deleteTransaction(${tx.id})" class="text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-all cursor-pointer">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                transactionList.appendChild(tr);
+            });
+        }
+
+        // AKSI KLIK SIMPAN: Menambah data baru
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const typeInput = document.querySelector('input[name="tx-type"]:checked').value;
+            
+            const newTransaction = {
+                id: Date.now(),
+                title: titleInput.value.trim(),
+                amount: parseFloat(amountInput.value),
+                type: typeInput,
+                category: categoryInput.value,
+                date: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+            };
+
+            transactions.push(newTransaction);
+            saveDataAndRefresh(); // Otomatis simpan & perbarui tampilan langsung
+            
+            form.reset();
+            titleInput.focus();
+        });
+
+        // AKSI KLIK HAPUS
+        function deleteTransaction(id) {
+            if(confirm('Apakah Anda yakin ingin menghapus transaksi ini?')) {
+                transactions = transactions.filter(tx => tx.id !== id);
+                saveDataAndRefresh(); // Otomatis simpan & perbarui tampilan langsung
+            }
+        }
+
+        // MENYIMPAN DATA KE LOCALSTORAGE & UI TERUPDATE SECARA OTOMATIS
+        function saveDataAndRefresh() {
+            localStorage.setItem('cashflow_transactions', JSON.stringify(transactions));
+            init(); // Panggil fungsi inisialisasi ulang komponen dashboard dan tabel riwayat
+        }
+
+        // ==========================================
+        //  SISTEM BACKUP & RESTORE DATA (JSON)
+        // ==========================================
+
+        // 1. Fungsi Backup (Ekspor data ke berkas .json)
+        function backupData() {
+            if (transactions.length === 0) {
+                alert("Belum ada data transaksi yang bisa dicadangkan!");
+                return;
+            }
+            
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
+            const downloadAnchor = document.createElement('a');
+            
+            // Format nama berkas: backup-cashflow-01-Jun-2026.json
+            const dateStr = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+            
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `backup-cashflow-${dateStr}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        // 2. Fungsi Restore (Impor data dari berkas .json)
+        function restoreData(event) {
+            const fileReader = new FileReader();
+            const file = event.target.files[0];
+
+            if (!file) return;
+
+            fileReader.onload = function(e) {
+                try {
+                    const parsedData = JSON.parse(e.target.result);
+                    
+                    // Validasi sederhana untuk memastikan isi file berbentuk struktur array
+                    if (Array.isArray(parsedData)) {
+                        if (confirm(`Menemukan ${parsedData.length} transaksi di file backup. Apakah Anda ingin menimpa data saat ini?`)) {
+                            transactions = parsedData;
+                            saveDataAndRefresh(); // Otomatis simpan data baru dan perbarui UI
+                            alert("Data berhasil dipulihkan (Restore Sukses)!");
+                        }
+                    } else {
+                        alert("Format file cadangan salah atau rusak!");
+                    }
+                } catch (error) {
+                    alert("Gagal membaca file. Pastikan file berupa file .json cadangan asli!");
+                }
+                // Reset input agar bisa memilih file yang sama lagi jika diinginkan
+                event.target.value = '';
+            };
+
+            fileReader.readAsText(file);
+        }
+
+        // Fungsi Membuka dialog Cetak PDF
+        function exportToPDF() {
+            window.print();
+        }
+
+        // Registrasi Service Worker untuk PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker aktif!', reg))
+                    .catch(err => console.log('Gagal mendaftarkan Service Worker:', err));
+            });
+        }
+
+        // Fungsi Utama me-refresh dashboard & tabel riwayat secara real-time
+        function init() {
+            updateDashboard();
+            renderTransactions();
+        }
+
+        // Jalankan aplikasi pertama kali saat halaman dibuka
+        init();
+    </script>
+</body>
+</html>
